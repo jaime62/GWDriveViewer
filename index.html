@@ -3,6 +3,7 @@
 <head>
   <title>GW Drive Viewer</title>
   <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <h1>Gulf Waters Shared Files</h1>
@@ -13,54 +14,78 @@
     const CLIENT_ID = '729607447206-ii0q78e7880g36se8t9ahv3u27reqgl0.apps.googleusercontent.com';
     const FOLDER_ID = '13hmrLh8V3xJut6h7n1q2gF21XwYdfPDR';
 
-    function start() {
-      gapi.load('client:auth2', () => {
-        gapi.client.init({
-          clientId: CLIENT_ID,
-          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-          scope: "https://www.googleapis.com/auth/drive.readonly"
-        }).then(() => {
-          const authInstance = gapi.auth2.getAuthInstance();
-          document.getElementById("signin").onclick = () => {
-            authInstance.signIn().then(() => {
-              console.log("Signed in");
-              listDriveFiles();
-            }).catch(err => {
-              console.error("Sign-in error:", err);
-            });
-          };
-        }).catch(err => {
-          console.error("gapi.client.init error:", err);
+    let tokenClient;
+    let gapiInited = false;
+    let gisInited = false;
+
+    document.getElementById("signin").onclick = handleAuthClick;
+
+    function gapiLoaded() {
+      gapi.load('client', async () => {
+        await gapi.client.init({
+          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"]
         });
+        gapiInited = true;
+        maybeEnableButton();
       });
     }
 
-    function listDriveFiles() {
-      gapi.client.drive.files.list({
-        q: `'${FOLDER_ID}' in parents and trashed = false`,
-        fields: 'files(id, name, mimeType, webViewLink)',
-        pageSize: 100
-      }).then(response => {
+    function gisLoaded() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        callback: async (tokenResponse) => {
+          gapi.client.setToken({ access_token: tokenResponse.access_token });
+          listDriveFiles();
+        }
+      });
+      gisInited = true;
+      maybeEnableButton();
+    }
+
+    function maybeEnableButton() {
+      if (gapiInited && gisInited) {
+        document.getElementById("signin").disabled = false;
+      }
+    }
+
+    function handleAuthClick() {
+      tokenClient.requestAccessToken();
+    }
+
+    async function listDriveFiles() {
+      try {
+        const response = await gapi.client.drive.files.list({
+          q: `'${FOLDER_ID}' in parents and trashed = false`,
+          fields: 'files(id, name, mimeType, webViewLink)',
+          pageSize: 100
+        });
+
         const files = response.result.files;
         const list = document.getElementById("fileList");
         list.innerHTML = '';
+
         if (!files || files.length === 0) {
           list.innerHTML = '<li>No files found.</li>';
           return;
         }
+
         files.forEach(file => {
           const item = document.createElement('li');
           item.innerHTML = `<a href="${file.webViewLink}" target="_blank">${file.name}</a>`;
           list.appendChild(item);
         });
-      }, error => {
-        console.error("Drive API error:", error);
-        alert("Failed to load files. See console.");
-      });
+      } catch (err) {
+        console.error("Drive API error:", err);
+        alert("Failed to list files. See console.");
+      }
     }
 
-    // Call start after gapi loads
-    window.onload = start;
+    // Start loading
+    window.onload = () => {
+      gapiLoaded();
+      gisLoaded();
+    };
   </script>
 </body>
 </html>
