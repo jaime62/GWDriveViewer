@@ -1,114 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gulf Waters Drive Viewer</title>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f9f9f9;
-      color: #333;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background-color: #0077cc;
-      padding: 10px;
-      text-align: center;
-    }
-    header img {
-      max-height: 60px;
-    }
-    main {
-      padding: 20px;
-      max-width: 800px;
-      margin: auto;
-    }
-    h1 {
-      text-align: center;
-      margin-top: 0;
-    }
-    .item {
-      display: flex;
-      align-items: center;
-      padding: 8px;
-      background: white;
-      margin: 5px 0;
-      border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .icon {
-      width: 24px;
-      margin-right: 10px;
-    }
-    a {
-      text-decoration: none;
-      color: #0077cc;
-      font-weight: 500;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
-  </style>
+  <title>GW Drive Viewer</title>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-  <header>
-    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAABiCAYAAACfuQcIAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWklEQVR4nO3bMQ0CQRAF0Xk4A51A5YxBCrKq14WSdZANsYIA3xPYae0tuN9wf0vhdXwDYJA9vNMQAAAAAAAPg/AICwIwAA8A8AAMAPAADwDwAAwA8AAPAHAADwBwAA8AcAAPAPAADwDwAAwA8AAPAHAADwBwAA8AcAAPAPAADwDwAAwA8AAPAHAADwBwAA8AcAAPAPAADwDwAAwA8AAPAHAADwBwAA8AcAAPAPAADwDwAAwE+U4F3mhtjXWdqyzrHtp6czmf9R5b/t1TrL3b8vAAAAAAAAAAAAAPBnAO5jAsrI8DQ9AAAAAElFTkSuQmCC" alt="Gulf Waters Logo" />
-  </header>
+  <h1>Gulf Waters Shared Files</h1>
+  <div id="g_id_onload"
+       data-client_id="729607447206-ii0q78e7880g36se8t9ahv3u27reqgl0.apps.googleusercontent.com"
+       data-context="signin"
+       data-ux_mode="popup"
+       data-callback="handleCredentialResponse"
+       data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin"
+       data-type="standard"
+       data-size="large"
+       data-theme="outline"
+       data-text="sign_in_with"
+       data-shape="rectangular"
+       data-logo_alignment="left">
+  </div>
 
-  <main>
-    <h1>Gulf Waters Shared Files</h1>
-    <div id="output">Loading...</div>
-  </main>
+  <ul id="fileList"></ul>
 
   <script>
-    const API_KEY = 'AIzaSyDp4Y2uWMwLBY5nI0d8LUeRYqPZ7nHQUcI';
     const FOLDER_ID = '13hmrLh8V3xJut6h7n1q2gF21XwYdfPDR';
 
-    const output = document.getElementById('output');
-
-    async function listFolderContents() {
-      const url = `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents+and+trashed=false&key=${API_KEY}&fields=files(id,name,mimeType,webViewLink)&pageSize=1000`;
-
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (!data.files || data.files.length === 0) {
-          output.innerHTML = '<p>No files found.</p>';
-          return;
-        }
-
-        const files = data.files.sort((a, b) => a.name.localeCompare(b.name));
-
-        output.innerHTML = '';
-        files.forEach(file => {
-          const div = document.createElement('div');
-          div.className = 'item';
-
-          const icon = document.createElement('img');
-          icon.className = 'icon';
-          icon.src = file.mimeType === 'application/vnd.google-apps.folder'
-            ? 'https://www.gstatic.com/images/icons/material/system/24/folder_blue_24dp.png'
-            : 'https://www.gstatic.com/images/icons/material/system/24/insert_drive_file_24dp.png';
-
-          const link = document.createElement('a');
-          link.href = file.webViewLink;
-          link.target = '_blank';
-          link.textContent = file.name;
-
-          div.appendChild(icon);
-          div.appendChild(link);
-          output.appendChild(div);
+    function handleCredentialResponse(response) {
+      const jwt = response.credential;
+      // Initialize GAPI after login
+      gapi.load('client', () => {
+        gapi.client.init({
+          apiKey: 'AIzaSyDp4Y2uWMwLBY5nI0d8LUeRYqPZ7nHQUcI', // optional if not using public folder fallback
+          clientId: 'YOUR_CLIENT_ID_HERE',
+          scope: 'https://www.googleapis.com/auth/drive.readonly',
+        }).then(() => {
+          gapi.auth.setToken({access_token: jwt});
+          listDriveFiles();
         });
-      } catch (error) {
-        output.innerHTML = '<p>Failed to load folder contents.</p>';
-        console.error(error);
-      }
+      });
     }
 
-    listFolderContents();
+    function listDriveFiles() {
+      gapi.client.drive.files.list({
+        q: `'${FOLDER_ID}' in parents and trashed = false`,
+        fields: 'files(id, name, mimeType, webViewLink)',
+        pageSize: 100
+      }).then(response => {
+        const files = response.result.files;
+        const list = document.getElementById('fileList');
+        list.innerHTML = '';
+        if (!files || files.length === 0) {
+          list.innerHTML = '<li>No files found.</li>';
+          return;
+        }
+        files.forEach(file => {
+          const item = document.createElement('li');
+          item.innerHTML = `<a href="${file.webViewLink}" target="_blank">${file.name}</a>`;
+          list.appendChild(item);
+        });
+      }, error => {
+        console.error('Error fetching files:', error);
+        alert('Failed to load files. See console.');
+      });
+    }
   </script>
 </body>
 </html>
