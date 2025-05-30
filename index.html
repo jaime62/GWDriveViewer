@@ -1,61 +1,66 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>GW Drive Viewer</title>
-    <script src="https://apis.google.com/js/api.js"></script>
-  </head>
-  <body>
-    <h1>Gulf Waters Shared Files</h1>
-    <button id="signin">Sign In with Google</button>
-    <ul id="fileList"></ul>
+<head>
+  <title>GW Drive Viewer</title>
+  <script src="https://apis.google.com/js/api.js"></script>
+</head>
+<body>
+  <h1>Gulf Waters Shared Files</h1>
+  <button id="signin">Sign In with Google</button>
+  <ul id="fileList"></ul>
 
-    <script>
-      const CLIENT_ID = '729607447206-ii0q78e7880g36se8t9ahv3u27reqgl0.apps.googleusercontent.com';
-      const FOLDER_ID = '13hmrLh8V3xJut6h7n1q2gF21XwYdfPDR';
+  <script>
+    const CLIENT_ID = '729607447206-ii0q78e7880g36se8t9ahv3u27reqgl0.apps.googleusercontent.com';
+    const FOLDER_ID = '13hmrLh8V3xJut6h7n1q2gF21XwYdfPDR';
 
-      document.getElementById('signin').addEventListener('click', () => {
-        gapi.load('client:auth2', () => {
-          gapi.client.init({
-            clientId: CLIENT_ID,
-            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-            scope: 'https://www.googleapis.com/auth/drive.readonly'
-          }).then(() => {
-            const GoogleAuth = gapi.auth2.getAuthInstance();
-            GoogleAuth.signIn().then(() => {
-              console.log("Signed in. Now listing files...");
-              listDriveFiles();  // this should now run after sign-in
+    function start() {
+      gapi.load('client:auth2', () => {
+        gapi.client.init({
+          clientId: CLIENT_ID,
+          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+          scope: "https://www.googleapis.com/auth/drive.readonly"
+        }).then(() => {
+          const authInstance = gapi.auth2.getAuthInstance();
+          document.getElementById("signin").onclick = () => {
+            authInstance.signIn().then(() => {
+              console.log("Signed in");
+              listDriveFiles();
             }).catch(err => {
               console.error("Sign-in error:", err);
             });
-          }).catch(err => {
-            console.error("GAPI init error:", err);
-          });
+          };
+        }).catch(err => {
+          console.error("gapi.client.init error:", err);
         });
       });
+    }
 
-      function listDriveFiles() {
-        gapi.client.drive.files.list({
-          q: `'${FOLDER_ID}' in parents and trashed = false`,
-          fields: 'files(id, name, mimeType, webViewLink)',
-          pageSize: 100
-        }).then(response => {
-          const files = response.result.files;
-          const list = document.getElementById('fileList');
-          list.innerHTML = '';
-          if (!files || files.length === 0) {
-            list.innerHTML = '<li>No files found.</li>';
-            return;
-          }
-          files.forEach(file => {
-            const item = document.createElement('li');
-            item.innerHTML = `<a href="${file.webViewLink}" target="_blank">${file.name}</a>`;
-            list.appendChild(item);
-          });
-        }, error => {
-          console.error('Drive API Error:', error);
-          alert('Error loading files — check the browser console.');
+    function listDriveFiles() {
+      gapi.client.drive.files.list({
+        q: `'${FOLDER_ID}' in parents and trashed = false`,
+        fields: 'files(id, name, mimeType, webViewLink)',
+        pageSize: 100
+      }).then(response => {
+        const files = response.result.files;
+        const list = document.getElementById("fileList");
+        list.innerHTML = '';
+        if (!files || files.length === 0) {
+          list.innerHTML = '<li>No files found.</li>';
+          return;
+        }
+        files.forEach(file => {
+          const item = document.createElement('li');
+          item.innerHTML = `<a href="${file.webViewLink}" target="_blank">${file.name}</a>`;
+          list.appendChild(item);
         });
-      }
-    </script>
-  </body>
+      }, error => {
+        console.error("Drive API error:", error);
+        alert("Failed to load files. See console.");
+      });
+    }
+
+    // Call start after gapi loads
+    window.onload = start;
+  </script>
+</body>
 </html>
