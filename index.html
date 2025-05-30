@@ -2,12 +2,12 @@
 <html>
 <head>
   <title>GW Drive Viewer</title>
-  <script src="https://apis.google.com/js/api.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
 </head>
 <body>
   <h1>Gulf Waters Shared Files</h1>
-  <button id="signin">Sign In with Google</button>
+  <button id="signin" disabled>Sign In with Google</button>
   <ul id="fileList"></ul>
 
   <script>
@@ -81,7 +81,7 @@
       }
     }
 
-    // Start loading
+    // Begin loading on window ready
     window.onload = () => {
       gapiLoaded();
       gisLoaded();
