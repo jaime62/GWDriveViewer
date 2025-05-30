@@ -55,11 +55,14 @@
 
     async function listDriveFiles() {
       try {
-        const response = await gapi.client.drive.files.list({
-          q: `'${FOLDER_ID}' in parents and trashed = false`,
-          fields: 'files(id, name, mimeType, webViewLink)',
-          pageSize: 100
-        });
+const response = await gapi.client.drive.files.list({
+  q: `'${FOLDER_ID}' in parents and trashed = false`,
+  fields: 'files(id, name, mimeType, webViewLink)',
+  pageSize: 100,
+  supportsAllDrives: true,
+  includeItemsFromAllDrives: true
+});
+
 
         const files = response.result.files;
         const list = document.getElementById("fileList");
