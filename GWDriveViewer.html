@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gulf Waters Drive Viewer</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f9f9f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #0077cc;
+      padding: 10px;
+      text-align: center;
+    }
+    header img {
+      max-height: 60px;
+    }
+    main {
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      margin-top: 0;
+    }
+    .item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background: white;
+      margin: 5px 0;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .icon {
+      width: 24px;
+      margin-right: 10px;
+    }
+    a {
+      text-decoration: none;
+      color: #0077cc;
+      font-weight: 500;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAABiCAYAAACfuQcIAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWklEQVR4nO3bMQ0CQRAF0Xk4A51A5YxBCrKq14WSdZANsYIA3xPYae0tuN9wf0vhdXwDYJA9vNMQAAAAAAAPg/AICwIwAA8A8AAMAPAADwDwAAwA8AAPAHAADwBwAA8AcAAPAPAADwDwAAwA8AAPAHAADwBwAA8AcAAPAPAADwDwAAwA8AAPAHAADwBwAA8AcAAPAPAADwDwAAwA8AAPAHAADwBwAA8AcAAPAPAADwDwAAwE+U4F3mhtjXWdqyzrHtp6czmf9R5b/t1TrL3b8vAAAAAAAAAAAAAPBnAO5jAsrI8DQ9AAAAAElFTkSuQmCC" alt="Gulf Waters Logo" />
+  </header>
+
+  <main>
+    <h1>Gulf Waters Shared Files</h1>
+    <div id="output">Loading...</div>
+  </main>
+
+  <script>
+    const API_KEY = 'AIzaSyDp4Y2uWMwLBY5nI0d8LUeRYqPZ7nHQUcI';
+    const FOLDER_ID = '13hmrLh8V3xJut6h7n1q2gF21XwYdfPDR';
+
+    const output = document.getElementById('output');
+
+    async function listFolderContents() {
+      const url = `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents+and+trashed=false&key=${API_KEY}&fields=files(id,name,mimeType,webViewLink)&pageSize=1000`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data.files || data.files.length === 0) {
+          output.innerHTML = '<p>No files found.</p>';
+          return;
+        }
+
+        const files = data.files.sort((a, b) => a.name.localeCompare(b.name));
+
+        output.innerHTML = '';
+        files.forEach(file => {
+          const div = document.createElement('div');
+          div.className = 'item';
+
+          const icon = document.createElement('img');
+          icon.className = 'icon';
+          icon.src = file.mimeType === 'application/vnd.google-apps.folder'
+            ? 'https://www.gstatic.com/images/icons/material/system/24/folder_blue_24dp.png'
+            : 'https://www.gstatic.com/images/icons/material/system/24/insert_drive_file_24dp.png';
+
+          const link = document.createElement('a');
+          link.href = file.webViewLink;
+          link.target = '_blank';
+          link.textContent = file.name;
+
+          div.appendChild(icon);
+          div.appendChild(link);
+          output.appendChild(div);
+        });
+      } catch (error) {
+        output.innerHTML = '<p>Failed to load folder contents.</p>';
+        console.error(error);
+      }
+    }
+
+    listFolderContents();
+  </script>
+</body>
+</html>
